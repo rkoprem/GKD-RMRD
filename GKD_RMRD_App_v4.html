@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GKD RMRD</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;background:#0d1117;color:#e6edf3;font-size:14px;min-height:100vh;}
+.hdr{background:#161b22;border-bottom:2px solid #f0b429;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:200;}
+.hdr h1{font-size:17px;font-weight:700;color:#f0b429;}
+.hdr p{font-size:11px;color:#8b949e;margin-top:2px;}
+.hdr-right{text-align:right;font-size:11px;}
+#clockDate{color:#f0b429;font-weight:600;}
+#clockTime{color:#8b949e;margin-top:2px;}
+/* SYNC STATUS */
+.sync-bar{background:#161b22;border-bottom:1px solid #30363d;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;font-size:11px;}
+.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+.sync-dot.ok{background:#3fb950;} .sync-dot.err{background:#f85149;} .sync-dot.wait{background:#f0b429;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.sync-txt{color:#8b949e;}
+.sync-url-btn{background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;}
+/* SETUP MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal-bg.hide{display:none;}
+.modal{background:#161b22;border:1px solid #f0b429;border-radius:12px;padding:20px;width:100%;max-width:420px;}
+.modal h2{color:#f0b429;font-size:15px;margin-bottom:12px;}
+.modal p{font-size:12px;color:#8b949e;line-height:1.7;margin-bottom:12px;}
+.modal input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:7px;padding:10px 12px;color:#e6edf3;font-size:13px;outline:none;margin-bottom:12px;}
+.modal input:focus{border-color:#f0b429;}
+.tabs{display:flex;background:#161b22;border-bottom:1px solid #30363d;overflow-x:auto;}
+.tab{flex:1;min-width:68px;padding:11px 4px;text-align:center;font-size:11px;font-weight:600;color:#8b949e;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;}
+.tab.on{color:#f0b429;border-bottom-color:#f0b429;background:rgba(240,180,41,0.07);}
+.pg{display:none;padding:14px;}.pg.on{display:block;}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:14px;margin-bottom:14px;}
+.ctitle{font-size:12px;font-weight:700;color:#f0b429;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+label{display:block;font-size:11px;color:#8b949e;font-weight:600;margin-bottom:4px;}
+input[type=text],input[type=number],input[type=time],input[type=date]{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:7px;padding:9px 11px;color:#e6edf3;font-size:14px;outline:none;}
+input:focus{border-color:#f0b429;}
+.frow{margin-bottom:12px;}
+.fgrid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.shtog{display:grid;grid-template-columns:1fr 1fr;border:1px solid #30363d;border-radius:8px;overflow:hidden;margin-bottom:14px;}
+.shbtn{padding:11px;text-align:center;cursor:pointer;font-weight:700;font-size:13px;}
+.shbtn.M{color:#fbbf24;background:rgba(251,191,36,.05);}
+.shbtn.E{color:#818cf8;background:rgba(129,140,248,.05);}
+.shbtn.M.on{background:rgba(251,191,36,.2);border-bottom:3px solid #fbbf24;}
+.shbtn.E.on{background:rgba(129,140,248,.2);border-bottom:3px solid #818cf8;}
+.btn{display:block;width:100%;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;font-family:Arial,sans-serif;}
+.btn:last-child{margin-bottom:0;}.btn:active{transform:scale(.97);}
+.btn-y{background:#f0b429;color:#000;}
+.btn-g{background:#238636;color:#fff;}
+.btn-r{background:#da3633;color:#fff;}
+.btn-wa{background:#25d366;color:#fff;}
+.btn-gr{background:#30363d;color:#e6edf3;}
+.btn-sm{width:auto;padding:6px 12px;font-size:12px;margin:0;display:inline-block;}
+.vsearch{position:relative;}
+.vdrop{position:absolute;top:100%;left:0;right:0;background:#161b22;border:1px solid #f0b429;border-radius:8px;max-height:210px;overflow-y:auto;z-index:100;display:none;}
+.vdrop.on{display:block;}
+.vopt{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid #30363d;font-size:13px;}
+.vopt:hover{background:rgba(240,180,41,.1);}
+.vtag{background:#f0b429;color:#000;font-size:10px;font-weight:700;border-radius:3px;padding:2px 5px;white-space:nowrap;}
+.vselbox{background:rgba(240,180,41,.07);border:1px solid #f0b429;border-radius:8px;padding:11px 13px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.vselnum{font-size:15px;font-weight:700;color:#f0b429;}
+.vselroute{font-size:11px;color:#8b949e;margin-top:2px;}
+.trow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;}
+.tsw{position:relative;width:44px;height:24px;display:inline-block;}
+.tsw input{opacity:0;width:0;height:0;}
+.tslide{position:absolute;inset:0;background:#30363d;border-radius:24px;cursor:pointer;transition:.3s;}
+.tslide:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s;}
+.tsw input:checked+.tslide{background:#238636;}
+.tsw input:checked+.tslide:before{transform:translateX(20px);}
+.sprow{display:grid;grid-template-columns:1.8fr .8fr .9fr 36px;gap:6px;align-items:end;margin-bottom:8px;}
+.sprow input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:7px;padding:8px 9px;color:#e6edf3;font-size:13px;outline:none;}
+.sprow input:focus{border-color:#f0b429;}
+.spadd{border:1px dashed #da3633;color:#da3633;background:rgba(218,54,51,.07);border-radius:7px;padding:9px;text-align:center;cursor:pointer;font-size:13px;margin-bottom:12px;}
+.bdg{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+.bdg-M{background:rgba(251,191,36,.15);color:#fbbf24;}
+.bdg-E{background:rgba(129,140,248,.15);color:#818cf8;}
+.bdg-ok{background:rgba(35,134,54,.2);color:#3fb950;}
+.bdg-sp{background:rgba(218,54,51,.2);color:#f85149;}
+.rentry{background:#0d1117;border:1px solid #30363d;border-radius:8px;margin-bottom:10px;overflow:hidden;}
+.rhdr{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;cursor:pointer;border-bottom:1px solid #30363d;}
+.rhdr:hover{background:rgba(255,255,255,.03);}
+.rbody{padding:13px;display:none;}
+.rbody.on{display:block;}
+.rrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #21262d;font-size:13px;}
+.rrow:last-child{border-bottom:none;}
+.rlbl{color:#8b949e;}.rval{font-weight:600;font-family:monospace;}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.sbox{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;text-align:center;}
+.snum{font-size:21px;font-weight:700;color:#f0b429;font-family:monospace;}
+.slbl{font-size:11px;color:#8b949e;margin-top:3px;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+.tbl th{background:#0d1117;padding:6px 8px;text-align:left;color:#8b949e;font-weight:600;}
+.tbl td{padding:6px 8px;border-bottom:1px solid #21262d;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl .trow-total{background:rgba(218,54,51,.1);}
+.litre-big{font-size:26px!important;font-weight:700!important;text-align:center!important;color:#3fb950!important;border-color:#238636!important;}
+.clbox{background:rgba(35,134,54,.06);border:1px solid rgba(35,134,54,.3);border-radius:10px;padding:14px;margin-bottom:14px;}
+.clbox-t{font-size:12px;font-weight:700;color:#3fb950;margin-bottom:12px;}
+pre#waText{white-space:pre-wrap;font-family:Arial,sans-serif;font-size:12px;line-height:1.8;color:#e6edf3;background:#0d1117;padding:13px;border-radius:8px;border:1px solid #30363d;}
+.div{height:1px;background:#30363d;margin:12px 0;}
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#238636;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.on{opacity:1;}
+.filt{display:flex;gap:8px;align-items:flex-end;margin-bottom:14px;}
+.filt>div{flex:1;}
+.filt input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:7px;padding:9px 11px;color:#e6edf3;font-size:14px;outline:none;}
+.filt input:focus{border-color:#f0b429;}
+.empty{text-align:center;padding:30px 16px;color:#8b949e;font-size:13px;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- SETUP MODAL -->
+<div class="modal-bg" id="setupModal">
+  <div class="modal">
+    <h2>⚙️ Google Sheet Setup</h2>
+    <p>
+      <b>Step 1:</b> Google Sheet திற → Extensions → Apps Script<br>
+      <b>Step 2:</b> GKD_RMRD_AppsScript.gs code paste பண்ணு → Save<br>
+      <b>Step 3:</b> Deploy → New Deployment → Web App<br>
+      &nbsp;&nbsp;&nbsp;• Execute as: <b>Me</b><br>
+      &nbsp;&nbsp;&nbsp;• Who has access: <b>Anyone</b><br>
+      <b>Step 4:</b> Web App URL copy பண்ணி கீழே paste பண்ணு
+    </p>
+    <label>Web App URL</label>
+    <input type="text" id="setupUrl" placeholder="https://script.google.com/macros/s/...">
+    <button class="btn btn-y" onclick="saveSetup()">✅ Save & Connect</button>
+    <button class="btn btn-gr" onclick="skipSetup()">⏭ Skip (Offline மட்டும்)</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <h1>🥛 GKD RMRD</h1>
+    <p>Route Milk Record Dashboard</p>
+  </div>
+  <div class="hdr-right">
+    <div id="clockDate">--</div>
+    <div id="clockTime">--:--</div>
+  </div>
+</div>
+
+<!-- SYNC STATUS BAR -->
+<div class="sync-bar">
+  <div style="display:flex;align-items:center;">
+    <span class="sync-dot wait" id="syncDot"></span>
+    <span class="sync-txt" id="syncTxt">Connecting...</span>
+  </div>
+  <button class="sync-url-btn" onclick="openSetup()">⚙️ URL மாற்று</button>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab on" onclick="goPg('entry',this)">📋 Entry</div>
+  <div class="tab" onclick="goPg('close',this)">🔒 Close</div>
+  <div class="tab" onclick="goPg('report',this)">📊 Report</div>
+  <div class="tab" onclick="goPg('manager',this)">👔 Manager</div>
+</div>
+
+<!-- ENTRY -->
+<div id="pg-entry" class="pg on">
+  <div class="card">
+    <div class="ctitle">🔄 Shift & Staff</div>
+    <div class="shtog">
+      <div class="shbtn M on" id="sh-M" onclick="pickShift('M')">🌅 Morning<br><span style="font-size:10px;font-weight:400">8:30–10:30</span></div>
+      <div class="shbtn E" id="sh-E" onclick="pickShift('E')">🌙 Evening<br><span style="font-size:10px;font-weight:400">6:30–9:30</span></div>
+    </div>
+    <div class="fgrid2">
+      <div class="frow"><label>In Time</label><input type="time" id="inTime"></div>
+      <div class="frow"><label>Out Time</label><input type="time" id="outTime"></div>
+    </div>
+    <div class="frow"><label>Staff பெயர்</label><input type="text" id="staffName" placeholder="உங்கள் பெயர்"></div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">🚛 Vehicle Entry</div>
+    <div class="frow vsearch">
+      <label>Vehicle தேடவும்</label>
+      <input type="text" id="vSearch" placeholder="Vehicle no / route type பண்ணவும்..." autocomplete="off" oninput="vFilter()" onclick="vFilter()">
+      <div class="vdrop" id="vDrop"></div>
+    </div>
+
+    <div id="vArea" style="display:none;">
+      <div class="vselbox">
+        <div><div class="vselnum" id="vNum">--</div><div class="vselroute" id="vRoute">--</div></div>
+        <button class="btn btn-gr btn-sm" onclick="clearV()">✕ மாற்று</button>
+      </div>
+      <div class="fgrid2">
+        <div class="frow"><label>Dairy வந்த நேரம்</label><input type="time" id="vArrival"></div>
+        <div class="frow"><label>Can இறக்கம் Start</label><input type="time" id="vUnloadS"></div>
+      </div>
+      <div class="frow"><label>Full இறக்கம் முடிந்தது</label><input type="time" id="vUnloadE"></div>
+      <div class="fgrid2">
+        <div class="frow"><label>மொத்த Milk Cans</label><input type="number" id="vCans" placeholder="0" min="0"></div>
+        <div class="frow"><label>Sample Count</label><input type="number" id="vSample" placeholder="0" min="0"></div>
+      </div>
+      <div class="trow">
+        <div><p style="font-size:13px;font-weight:600;">Spare Vehicle?</p><small style="font-size:11px;color:#8b949e;">Substitute ஆனால் ON</small></div>
+        <label class="tsw"><input type="checkbox" id="spareOn" onchange="toggleSpare()"><span class="tslide"></span></label>
+      </div>
+      <div id="spareBox" style="display:none;margin-top:8px;">
+        <div class="frow"><label>Spare Vehicle No</label><input type="text" id="spareNo" placeholder="TN XX XX XXXX"></div>
+        <div class="frow"><label>காரணம்</label><input type="text" id="spareWhy" placeholder="Breakdown..."></div>
+      </div>
+      <div class="div"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="ctitle" style="margin:0;">⚠️ Spoilage</div>
+        <span class="bdg bdg-sp" id="spBadge">0 Society</span>
+      </div>
+      <div id="spHdr" style="display:none;display:grid;grid-template-columns:1.8fr .8fr .9fr 36px;gap:6px;margin-bottom:4px;padding:0 2px;">
+        <span style="font-size:10px;color:#8b949e;font-weight:600;">Society பெயர்</span>
+        <span style="font-size:10px;color:#8b949e;font-weight:600;">Cans</span>
+        <span style="font-size:10px;color:#8b949e;font-weight:600;">Litres</span>
+        <span></span>
+      </div>
+      <div id="spList"></div>
+      <div class="spadd" onclick="addSpRow()">+ Society Spoilage சேர்க்கவும்</div>
+      <button class="btn btn-g" onclick="saveEntry()">✅ Vehicle Save பண்ணு</button>
+    </div>
+  </div>
+
+  <div class="card" id="savedCard" style="display:none;">
+    <div class="ctitle" style="display:flex;justify-content:space-between;"><span>✅ இன்றைய Entries</span><span class="bdg bdg-ok" id="savedBadge">0</span></div>
+    <div id="savedList"></div>
+  </div>
+</div>
+
+<!-- SHIFT CLOSE -->
+<div id="pg-close" class="pg">
+  <div class="card">
+    <div class="ctitle">🔒 Shift Close</div>
+    <div class="shtog">
+      <div class="shbtn M on" id="csh-M" onclick="pickCloseShift('M')">🌅 Morning</div>
+      <div class="shbtn E" id="csh-E" onclick="pickCloseShift('E')">🌙 Evening</div>
+    </div>
+    <div class="sgrid">
+      <div class="sbox"><div class="snum" id="cs-veh">0</div><div class="slbl">Entry Vehicles</div></div>
+      <div class="sbox"><div class="snum" id="cs-cans">0</div><div class="slbl">Cans</div></div>
+      <div class="sbox"><div class="snum" id="cs-spSoc">0</div><div class="slbl">Spoilage Society</div></div>
+      <div class="sbox"><div class="snum" id="cs-spLtr" style="font-size:15px;">0 L</div><div class="slbl">Spoilage Litres</div></div>
+    </div>
+    <div class="clbox">
+      <div class="clbox-t">📦 மொத்த Collection — Shift முடியும்போது</div>
+      <div class="frow"><label>மொத்த Collection Litres</label><input type="number" id="clLitres" class="litre-big" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="frow"><label>மொத்த Vehicles</label><input type="number" id="clVeh" placeholder="0" min="0"></div>
+      <div class="frow"><label>குறிப்பு (Optional)</label><input type="text" id="clNote" placeholder="ஏதாவது குறிப்பு..."></div>
+    </div>
+    <button class="btn btn-y" onclick="saveClose()">💾 Shift Close Save</button>
+    <button class="btn btn-wa" onclick="sendWA()">📲 WhatsApp Report</button>
+  </div>
+  <div class="card" id="waPrevCard" style="display:none;">
+    <div class="ctitle">👁 WhatsApp Preview</div>
+    <pre id="waText"></pre>
+  </div>
+</div>
+
+<!-- REPORT -->
+<div id="pg-report" class="pg">
+  <div class="card">
+    <div class="ctitle">📊 Daily Report</div>
+    <div class="filt">
+      <div><label>தேதி</label><input type="date" id="rptDate"></div>
+      <button class="btn btn-y btn-sm" onclick="loadReport()" style="padding:9px 16px;">காட்டு</button>
+    </div>
+    <button class="btn btn-gr" style="font-size:13px;padding:9px;" onclick="doCSV()">⬇️ CSV Export</button>
+  </div>
+  <div id="rptArea"><div class="empty">தேதி தேர்வு செய்து காட்டு அழுத்தவும்</div></div>
+</div>
+
+<!-- MANAGER -->
+<div id="pg-manager" class="pg">
+  <div class="card">
+    <div class="ctitle">👔 Manager — இன்று</div>
+    <div class="sgrid">
+      <div class="sbox"><div class="snum" id="mg-veh">0</div><div class="slbl">Vehicles</div></div>
+      <div class="sbox"><div class="snum" id="mg-ltr" style="font-size:15px;">-- L</div><div class="slbl">Collection</div></div>
+      <div class="sbox"><div class="snum" id="mg-morn">0</div><div class="slbl">Morning</div></div>
+      <div class="sbox"><div class="snum" id="mg-eve">0</div><div class="slbl">Evening</div></div>
+    </div>
+    <div class="div"></div>
+    <div class="ctitle">⚠️ Spoilage</div>
+    <div id="mg-spoil"><div class="empty" style="padding:10px;">✅ Spoilage இல்லை</div></div>
+    <div class="div"></div>
+    <div class="ctitle">🚛 Vehicles</div>
+    <div id="mg-vlist"><div class="empty" style="padding:10px;">Entry இல்லை</div></div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-wa" onclick="sendWAMgr()">📲 Full Report WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =========== VEHICLES ===========
+var VEH=[
+  {id:"V01",num:"TN 45 A 1001",route:"Kumbakonam – Papanasam"},
+  {id:"V02",num:"TN 45 A 1002",route:"Kumbakonam – Thanjavur"},
+  {id:"V03",num:"TN 45 B 2003",route:"Kumbakonam – Thiruvidaimarudur"},
+  {id:"V04",num:"TN 45 B 2004",route:"Kumbakonam – Swamimalai"},
+  {id:"V05",num:"TN 45 C 3005",route:"Kumbakonam – Mayiladuthurai"},
+  {id:"V06",num:"TN 45 C 3006",route:"Kumbakonam – Sirkazhi"},
+  {id:"V07",num:"TN 45 D 4007",route:"Kumbakonam – Poompuhar"},
+  {id:"V08",num:"TN 45 D 4008",route:"Kumbakonam – Pattukottai"},
+  {id:"V09",num:"TN 45 E 5009",route:"Kumbakonam – Thiruvarur"},
+  {id:"V10",num:"TN 45 E 5010",route:"Kumbakonam – Nagapattinam"},
+  {id:"V11",num:"TN 45 F 6011",route:"Kumbakonam – Vaitheeswaran Koil"},
+  {id:"V12",num:"TN 45 F 6012",route:"Kumbakonam – Chidambaram"},
+  {id:"V13",num:"TN 45 G 7013",route:"Kumbakonam – Ariyalur"},
+  {id:"V14",num:"TN 45 G 7014",route:"Kumbakonam – Perambalur"},
+  {id:"V15",num:"TN 45 H 8015",route:"Kumbakonam – Orathanadu"}
+];
+
+// =========== CONFIG ===========
+var WEB_APP_URL = localStorage.getItem('rmrd_url') || '';
+var curShift='M', curCloseShift='M', selVeh=null, spRowCount=0;
+
+// =========== STORAGE ===========
+function loadEntries(){ try{ return JSON.parse(localStorage.getItem('rmrd_entries')||'[]'); }catch(e){ return []; } }
+function storeEntries(d){ localStorage.setItem('rmrd_entries',JSON.stringify(d)); }
+function loadCloses(){ try{ return JSON.parse(localStorage.getItem('rmrd_closes')||'[]'); }catch(e){ return []; } }
+function storeCloses(d){ localStorage.setItem('rmrd_closes',JSON.stringify(d)); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function fmtD(s){ var d=new Date(s+'T00:00:00'); return d.toLocaleDateString('ta-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+
+// =========== CLOCK ===========
+function tick(){
+  var n=new Date();
+  document.getElementById('clockDate').textContent=n.toLocaleDateString('ta-IN',{day:'2-digit',month:'short',year:'numeric'});
+  document.getElementById('clockTime').textContent=n.toLocaleTimeString('ta-IN',{hour:'2-digit',minute:'2-digit'});
+}
+setInterval(tick,1000); tick();
+
+// =========== SYNC STATUS ===========
+function setSyncStatus(state, msg){
+  var dot=document.getElementById('syncDot');
+  var txt=document.getElementById('syncTxt');
+  dot.className='sync-dot '+state;
+  txt.textContent=msg;
+}
+
+// =========== SETUP ===========
+function openSetup(){
+  document.getElementById('setupUrl').value = WEB_APP_URL;
+  document.getElementById('setupModal').classList.remove('hide');
+}
+function saveSetup(){
+  var url=document.getElementById('setupUrl').value.trim();
+  if(!url){ toast('URL enter பண்ணவும்'); return; }
+  WEB_APP_URL=url;
+  localStorage.setItem('rmrd_url', url);
+  document.getElementById('setupModal').classList.add('hide');
+  toast('✅ URL Saved! Syncing...');
+  testConnection();
+}
+function skipSetup(){
+  document.getElementById('setupModal').classList.add('hide');
+  setSyncStatus('err','Offline mode — data locally saved');
+}
+
+function testConnection(){
+  if(!WEB_APP_URL){ setSyncStatus('err','URL இல்லை — Setup பண்ணவும்'); return; }
+  setSyncStatus('wait','Connecting...');
+  fetch(WEB_APP_URL+'?type=closes&date='+todayISO())
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d.status==='ok'){
+        setSyncStatus('ok','✅ Google Sheet Connected');
+        // merge sheet data into local
+        if(d.data && d.data.closes) mergeCloses(d.data.closes);
+      } else {
+        setSyncStatus('err','Sheet error: '+d.message);
+      }
+    })
+    .catch(function(e){ setSyncStatus('err','Connection failed'); });
+}
+
+function mergeCloses(sheetCloses){
+  if(!sheetCloses || !sheetCloses.length) return;
+  var local=loadCloses();
+  sheetCloses.forEach(function(sc){
+    var exists=local.find(function(l){ return l.date===String(sc.date) && l.shift===String(sc.shift); });
+    if(!exists) local.push({date:String(sc.date),shift:String(sc.shift),litres:parseFloat(sc.litres)||0,veh:parseInt(sc.veh)||0,note:sc.note||'',at:sc.at||''});
+  });
+  storeCloses(local);
+}
+
+// =========== SYNC TO SHEET ===========
+function syncEntry(entry){
+  if(!WEB_APP_URL) return;
+  setSyncStatus('wait','Syncing...');
+  fetch(WEB_APP_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({action:'saveEntry', entry:entry})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.status==='ok') setSyncStatus('ok','✅ Synced — '+new Date().toLocaleTimeString('ta-IN',{hour:'2-digit',minute:'2-digit'}));
+    else setSyncStatus('err','Sync error: '+d.message);
+  })
+  .catch(function(){ setSyncStatus('err','Sync failed — saved locally'); });
+}
+
+function syncClose(cl){
+  if(!WEB_APP_URL) return;
+  setSyncStatus('wait','Syncing...');
+  fetch(WEB_APP_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({action:'saveClose', close:cl})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.status==='ok') setSyncStatus('ok','✅ Synced — '+new Date().toLocaleTimeString('ta-IN',{hour:'2-digit',minute:'2-digit'}));
+    else setSyncStatus('err','Sync error: '+d.message);
+  })
+  .catch(function(){ setSyncStatus('err','Sync failed — saved locally'); });
+}
+
+function syncDeleteEntry(id){
+  if(!WEB_APP_URL) return;
+  fetch(WEB_APP_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({action:'deleteEntry', id:id})
+  }).catch(function(){});
+}
+
+// =========== PAGES ===========
+function goPg(name,el){
+  document.querySelectorAll('.pg').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); });
+  document.getElementById('pg-'+name).classList.add('on');
+  el.classList.add('on');
+  if(name==='close') refreshClosePg();
+  if(name==='manager') refreshMgrPg();
+}
+
+// =========== SHIFT ===========
+function pickShift(s){
+  curShift=s;
+  document.getElementById('sh-M').classList.toggle('on',s==='M');
+  document.getElementById('sh-E').classList.toggle('on',s==='E');
+}
+function pickCloseShift(s){
+  curCloseShift=s;
+  document.getElementById('csh-M').classList.toggle('on',s==='M');
+  document.getElementById('csh-E').classList.toggle('on',s==='E');
+  refreshClosePg();
+}
+
+// =========== VEHICLE ===========
+function vFilter(){
+  var q=document.getElementById('vSearch').value.toLowerCase().trim();
+  var drop=document.getElementById('vDrop');
+  var list=VEH.filter(function(v){ return !q||v.num.toLowerCase().indexOf(q)>=0||v.route.toLowerCase().indexOf(q)>=0||v.id.toLowerCase().indexOf(q)>=0; });
+  drop.innerHTML=list.length?list.map(function(v){
+    return '<div class="vopt" onclick="pickVeh(\''+v.id+'\')"><span class="vtag">'+v.id+'</span><div><div style="font-weight:600;">'+v.num+'</div><div style="font-size:11px;color:#8b949e;">'+v.route+'</div></div></div>';
+  }).join(''):'<div style="padding:12px;color:#8b949e;text-align:center;">Vehicle இல்லை</div>';
+  drop.classList.add('on');
+}
+function pickVeh(id){
+  var v=VEH.find(function(x){ return x.id===id; });
+  if(!v) return;
+  selVeh=v;
+  document.getElementById('vDrop').classList.remove('on');
+  document.getElementById('vSearch').value=v.num;
+  document.getElementById('vNum').textContent=v.num;
+  document.getElementById('vRoute').textContent=v.route;
+  document.getElementById('vArea').style.display='block';
+  ['vArrival','vUnloadS','vUnloadE','vCans','vSample','spareNo','spareWhy'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('spareOn').checked=false;
+  document.getElementById('spareBox').style.display='none';
+  document.getElementById('spList').innerHTML='';
+  document.getElementById('spHdr').style.display='none';
+  spRowCount=0;
+  document.getElementById('spBadge').textContent='0 Society';
+}
+function clearV(){
+  selVeh=null;
+  document.getElementById('vSearch').value='';
+  document.getElementById('vArea').style.display='none';
+  document.getElementById('vDrop').classList.remove('on');
+}
+document.addEventListener('click',function(e){ if(!e.target.closest('.vsearch')) document.getElementById('vDrop').classList.remove('on'); });
+function toggleSpare(){ document.getElementById('spareBox').style.display=document.getElementById('spareOn').checked?'block':'none'; }
+
+// =========== SPOILAGE ===========
+function addSpRow(){
+  spRowCount++;
+  document.getElementById('spBadge').textContent=spRowCount+' Society';
+  document.getElementById('spHdr').style.display='grid';
+  var k='sp_'+Date.now();
+  var div=document.createElement('div');
+  div.className='sprow'; div.id=k;
+  div.innerHTML='<input type="text" id="'+k+'_s" placeholder="Society பெயர்"><input type="number" id="'+k+'_c" placeholder="0" min="0"><input type="number" id="'+k+'_l" placeholder="0.0" step="0.1" min="0"><button onclick="delSpRow(\''+k+'\')" style="background:#da3633;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:14px;font-weight:700;height:36px;">✕</button>';
+  document.getElementById('spList').appendChild(div);
+}
+function delSpRow(k){
+  var el=document.getElementById(k); if(el) el.remove();
+  spRowCount=Math.max(0,spRowCount-1);
+  document.getElementById('spBadge').textContent=spRowCount+' Society';
+  if(spRowCount===0) document.getElementById('spHdr').style.display='none';
+}
+function getSpData(){
+  var out=[];
+  document.querySelectorAll('#spList .sprow').forEach(function(row){
+    var k=row.id;
+    var sEl=document.getElementById(k+'_s');
+    if(sEl&&sEl.value.trim()) out.push({society:sEl.value.trim(),cans:parseFloat(document.getElementById(k+'_c').value)||0,litres:parseFloat(document.getElementById(k+'_l').value)||0});
+  });
+  return out;
+}
+
+// =========== SAVE ENTRY ===========
+function saveEntry(){
+  if(!selVeh){ toast('Vehicle தேர்வு செய்யவும்!'); return; }
+  var staff=document.getElementById('staffName').value.trim();
+  var inT=document.getElementById('inTime').value;
+  if(!staff){ toast('Staff பெயர் enter பண்ணவும்!'); return; }
+  if(!inT){ toast('In Time enter பண்ணவும்!'); return; }
+  var entry={
+    id:Date.now(), date:todayISO(), shift:curShift, staff:staff,
+    inTime:inT, outTime:document.getElementById('outTime').value,
+    vehId:selVeh.id, vehNum:selVeh.num, vehRoute:selVeh.route,
+    arrival:document.getElementById('vArrival').value,
+    unloadS:document.getElementById('vUnloadS').value,
+    unloadE:document.getElementById('vUnloadE').value,
+    cans:parseInt(document.getElementById('vCans').value)||0,
+    sample:parseInt(document.getElementById('vSample').value)||0,
+    spare:document.getElementById('spareOn').checked,
+    spareNo:document.getElementById('spareNo').value,
+    spareWhy:document.getElementById('spareWhy').value,
+    spoilage:getSpData()
+  };
+  var all=loadEntries(); all.push(entry); storeEntries(all);
+  toast('✅ Saved! Syncing...');
+  syncEntry(entry);
+  clearV();
+  refreshSavedList();
+}
+
+function delEntry(id){
+  storeEntries(loadEntries().filter(function(e){ return e.id!==id; }));
+  syncDeleteEntry(id);
+  refreshSavedList();
+  toast('Deleted');
+}
+
+function refreshSavedList(){
+  var today=loadEntries().filter(function(e){ return e.date===todayISO(); });
+  var sec=document.getElementById('savedCard');
+  if(!today.length){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  document.getElementById('savedBadge').textContent=today.length;
+  document.getElementById('savedList').innerHTML=today.map(function(e){
+    var spL=e.spoilage.reduce(function(s,x){ return s+(x.litres||0); },0);
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #21262d;">'+
+      '<div><div style="font-weight:600;font-size:13px;">'+e.vehNum+' <span class="bdg bdg-'+e.shift+'">'+(e.shift==='M'?'Morning':'Evening')+'</span></div>'+
+      '<div style="font-size:11px;color:#8b949e;">'+e.cans+' cans'+(e.spoilage.length?' · <span style="color:#f85149;">⚠️ '+e.spoilage.length+' soc · '+spL.toFixed(1)+'L</span>':' · <span style="color:#3fb950;">✅ OK</span>')+'</div></div>'+
+      '<button class="btn btn-r btn-sm" onclick="delEntry('+e.id+')">🗑</button></div>';
+  }).join('');
+}
+
+// =========== SHIFT CLOSE ===========
+function refreshClosePg(){
+  var today=loadEntries().filter(function(e){ return e.date===todayISO()&&e.shift===curCloseShift; });
+  document.getElementById('cs-veh').textContent=today.length;
+  document.getElementById('cs-cans').textContent=today.reduce(function(s,e){ return s+e.cans; },0);
+  var allSp=[]; today.forEach(function(e){ e.spoilage.forEach(function(s){ allSp.push(s); }); });
+  document.getElementById('cs-spSoc').textContent=allSp.length;
+  document.getElementById('cs-spLtr').textContent=allSp.reduce(function(s,x){ return s+(x.litres||0); },0).toFixed(1)+' L';
+  var cl=loadCloses().find(function(c){ return c.date===todayISO()&&c.shift===curCloseShift; });
+  document.getElementById('clLitres').value=cl?cl.litres:'';
+  document.getElementById('clVeh').value=cl?cl.veh:today.length;
+  document.getElementById('clNote').value=cl?cl.note:'';
+  if(cl) buildWAPreview();
+}
+
+function saveClose(){
+  var litres=parseFloat(document.getElementById('clLitres').value);
+  if(!litres||litres<=0){ toast('Total Litres enter பண்ணவும்!'); return; }
+  var cl={date:todayISO(),shift:curCloseShift,litres:litres,veh:parseInt(document.getElementById('clVeh').value)||0,note:document.getElementById('clNote').value,at:new Date().toLocaleTimeString('ta-IN',{hour:'2-digit',minute:'2-digit'})};
+  var all=loadCloses().filter(function(c){ return !(c.date===todayISO()&&c.shift===curCloseShift); });
+  all.push(cl); storeCloses(all);
+  toast('✅ Saved! Syncing...');
+  syncClose(cl);
+  buildWAPreview();
+}
+
+// =========== WHATSAPP ===========
+function buildWAMsg(shift){
+  var date=todayISO();
+  var entries=loadEntries().filter(function(e){ return e.date===date&&e.shift===shift; });
+  var cl=loadCloses().find(function(c){ return c.date===date&&c.shift===shift; });
+  var shiftLbl=shift==='M'?'🌅 Morning (8:30–10:30)':'🌙 Evening (6:30–9:30)';
+  var totalLtr=cl?cl.litres+'':'--';
+  var totalVeh=cl?cl.veh:entries.length;
+  var totalCans=entries.reduce(function(s,e){ return s+e.cans; },0);
+  var allSp=[]; entries.forEach(function(e){ e.spoilage.forEach(function(s){ allSp.push({society:s.society,cans:s.cans,litres:s.litres}); }); });
+  var spLtr=allSp.reduce(function(s,x){ return s+(x.litres||0); },0);
+  var spCans=allSp.reduce(function(s,x){ return s+(x.cans||0); },0);
+  var m='🥛 *GKD Dairy – RMRD Report*\n';
+  m+='📅 *'+fmtD(date)+'*\n';
+  m+='⏰ *'+shiftLbl+'*\n';
+  m+='━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+  m+='✅ *மொத்த Collection*\n';
+  m+='   🧴 Litres   : *'+totalLtr+' L*\n';
+  m+='   🚛 Vehicles : *'+totalVeh+'*\n';
+  m+='   📦 Cans     : *'+totalCans+'*\n';
+  if(allSp.length>0){
+    m+='\n⚠️ *Spoilage — '+allSp.length+' Society*\n';
+    m+='   📦 Cans   : '+spCans+'\n';
+    m+='   🧴 Litres : *'+spLtr.toFixed(1)+' L*\n\n';
+    m+='   *Society வாரியாக:*\n';
+    allSp.forEach(function(s,i){ m+='   '+(i+1)+'. '+s.society+'\n      Cans: '+s.cans+' | Litres: '+s.litres+' L\n'; });
+  } else { m+='\n✅ *Spoilage இல்லை*\n'; }
+  if(cl&&cl.note) m+='\n📝 '+cl.note+'\n';
+  m+='\n━━━━━━━━━━━━━━━━━━━━━━━━\n_G.K. Dairy, Kumbakonam_';
+  return m;
+}
+function buildWAPreview(){ document.getElementById('waText').textContent=buildWAMsg(curCloseShift); document.getElementById('waPrevCard').style.display='block'; }
+function sendWA(){ if(!document.getElementById('clLitres').value){ toast('முதலில் Save பண்ணவும்!'); return; } window.open('https://wa.me/?text='+encodeURIComponent(buildWAMsg(curCloseShift)),'_blank'); }
+
+// =========== REPORT ===========
+function loadReport(){
+  var date=document.getElementById('rptDate').value;
+  if(!date){ toast('தேதி தேர்வு செய்யவும்'); return; }
+  var all=loadEntries().filter(function(e){ return e.date===date; });
+  var closes=loadCloses().filter(function(c){ return c.date===date; });
+  var area=document.getElementById('rptArea');
+  if(!all.length&&!closes.length){ area.innerHTML='<div class="empty">'+date+' – Entry இல்லை</div>'; return; }
+  var mE=all.filter(function(e){ return e.shift==='M'; });
+  var eE=all.filter(function(e){ return e.shift==='E'; });
+  var mCl=closes.find(function(c){ return c.shift==='M'; });
+  var eCl=closes.find(function(c){ return c.shift==='E'; });
+  var allSp=[]; all.forEach(function(e){ e.spoilage.forEach(function(s){ allSp.push({society:s.society,cans:s.cans,litres:s.litres,veh:e.vehNum,shift:e.shift}); }); });
+  var spLtr=allSp.reduce(function(s,x){ return s+(x.litres||0); },0);
+  var totalLtr=(parseFloat(mCl?mCl.litres:0)+parseFloat(eCl?eCl.litres:0));
+  var html='<div class="card"><div class="ctitle">📅 '+fmtD(date)+'</div><div class="sgrid"><div class="sbox"><div class="snum">'+all.length+'</div><div class="slbl">Vehicles</div></div><div class="sbox"><div class="snum" style="font-size:15px;">'+totalLtr.toFixed(1)+' L</div><div class="slbl">Collection</div></div><div class="sbox"><div class="snum">'+allSp.length+'</div><div class="slbl">Spoilage Society</div></div><div class="sbox"><div class="snum" style="font-size:15px;">'+spLtr.toFixed(1)+' L</div><div class="slbl">Spoilage Litres</div></div></div>';
+  if(mCl) html+='<div class="rrow"><span class="rlbl">🌅 Morning</span><span class="rval">'+mCl.litres+' L · '+mCl.veh+' vehs</span></div>';
+  if(eCl) html+='<div class="rrow"><span class="rlbl">🌙 Evening</span><span class="rval">'+eCl.litres+' L · '+eCl.veh+' vehs</span></div>';
+  html+='</div>';
+  if(mE.length) html+=renderShiftRpt('🌅 Morning',mE);
+  if(eE.length) html+=renderShiftRpt('🌙 Evening',eE);
+  if(allSp.length) html+=renderSpRpt(allSp);
+  area.innerHTML=html;
+}
+function renderShiftRpt(title,entries){
+  var html='<div class="card"><div class="ctitle">'+title+' ('+entries.length+')</div>';
+  entries.forEach(function(e){
+    var spL=e.spoilage.reduce(function(s,x){ return s+(x.litres||0); },0);
+    html+='<div class="rentry"><div class="rhdr" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div><div style="font-weight:700;font-size:13px;">'+e.vehNum+'</div><div style="font-size:11px;color:#8b949e;">'+e.vehRoute+'</div></div><div style="text-align:right;"><div style="font-size:12px;font-family:monospace;color:#f0b429;">'+e.cans+' cans</div>'+(e.spoilage.length?'<span class="bdg bdg-sp">⚠️ '+spL.toFixed(1)+'L</span>':'<span class="bdg bdg-ok">✓</span>')+'</div></div><div class="rbody"><div class="rrow"><span class="rlbl">Staff</span><span class="rval">'+e.staff+'</span></div><div class="rrow"><span class="rlbl">In / Out</span><span class="rval">'+e.inTime+' / '+(e.outTime||'--')+'</span></div><div class="rrow"><span class="rlbl">Arrival</span><span class="rval">'+(e.arrival||'--')+'</span></div><div class="rrow"><span class="rlbl">Unload</span><span class="rval">'+(e.unloadS||'--')+' → '+(e.unloadE||'--')+'</span></div><div class="rrow"><span class="rlbl">Samples</span><span class="rval">'+e.sample+'</span></div>'+(e.spare?'<div class="rrow"><span class="rlbl">Spare</span><span class="rval" style="color:#f97316;">'+e.spareNo+' – '+e.spareWhy+'</span></div>':'');
+    if(e.spoilage.length){
+      var tC=0,tL=0;
+      html+='<div style="margin-top:10px;"><div style="font-size:12px;font-weight:700;color:#f85149;margin-bottom:6px;">⚠️ Spoilage</div><table class="tbl"><tr><th>Society</th><th>Cans</th><th>Litres</th></tr>';
+      e.spoilage.forEach(function(s){ tC+=s.cans; tL+=(s.litres||0); html+='<tr><td>'+s.society+'</td><td>'+s.cans+'</td><td style="color:#f85149;font-weight:700;">'+s.litres+' L</td></tr>'; });
+      html+='<tr class="trow-total"><td><b>Total</b></td><td><b>'+tC+'</b></td><td style="color:#f85149;font-weight:700;">'+tL.toFixed(1)+' L</td></tr></table></div>';
+    }
+    html+='</div></div>';
+  });
+  return html+'</div>';
+}
+function renderSpRpt(spAll){
+  var tC=spAll.reduce(function(s,x){ return s+x.cans; },0),tL=spAll.reduce(function(s,x){ return s+(x.litres||0); },0);
+  return '<div class="card"><div class="ctitle">⚠️ Spoilage — முழு Report</div><table class="tbl"><tr><th>Vehicle</th><th>Society</th><th>Cans</th><th>Litres</th><th>Shift</th></tr>'+spAll.map(function(s){ return '<tr><td style="font-size:11px;">'+s.veh+'</td><td>'+s.society+'</td><td>'+s.cans+'</td><td style="color:#f85149;font-weight:700;">'+s.litres+' L</td><td><span class="bdg bdg-'+s.shift+'">'+(s.shift==='M'?'M':'E')+'</span></td></tr>'; }).join('')+'<tr class="trow-total"><td colspan="2"><b>மொத்தம்</b></td><td><b>'+tC+'</b></td><td style="color:#f85149;font-weight:700;">'+tL.toFixed(1)+' L</td><td></td></tr></table></div>';
+}
+
+// =========== MANAGER ===========
+function refreshMgrPg(){
+  var today=loadEntries().filter(function(e){ return e.date===todayISO(); });
+  var closes=loadCloses().filter(function(c){ return c.date===todayISO(); });
+  var tLtr=closes.reduce(function(s,c){ return s+parseFloat(c.litres||0); },0);
+  document.getElementById('mg-veh').textContent=today.length;
+  document.getElementById('mg-ltr').textContent=tLtr>0?tLtr.toFixed(1)+' L':'-- L';
+  document.getElementById('mg-morn').textContent=today.filter(function(e){ return e.shift==='M'; }).length;
+  document.getElementById('mg-eve').textContent=today.filter(function(e){ return e.shift==='E'; }).length;
+  var allSp=[]; today.forEach(function(e){ e.spoilage.forEach(function(s){ allSp.push({society:s.society,cans:s.cans,litres:s.litres,veh:e.vehNum,shift:e.shift}); }); });
+  var spEl=document.getElementById('mg-spoil');
+  if(!allSp.length){ spEl.innerHTML='<div class="empty" style="padding:10px;">✅ Spoilage இல்லை</div>'; }
+  else {
+    var tL=allSp.reduce(function(s,x){ return s+(x.litres||0); },0);
+    spEl.innerHTML='<table class="tbl"><tr><th>Vehicle</th><th>Society</th><th>Cans</th><th>Litres</th><th>Shift</th></tr>'+allSp.map(function(s){ return '<tr><td style="font-size:11px;">'+s.veh+'</td><td>'+s.society+'</td><td>'+s.cans+'</td><td style="color:#f85149;font-weight:700;">'+s.litres+' L</td><td><span class="bdg bdg-'+s.shift+'">'+(s.shift==='M'?'M':'E')+'</span></td></tr>'; }).join('')+'<tr class="trow-total"><td colspan="2"><b>மொத்தம்</b></td><td></td><td style="color:#f85149;font-weight:700;">'+tL.toFixed(1)+' L</td><td></td></tr></table>';
+  }
+  var vEl=document.getElementById('mg-vlist');
+  if(!today.length){ vEl.innerHTML='<div class="empty" style="padding:10px;">Entry இல்லை</div>'; return; }
+  vEl.innerHTML=today.map(function(e){ var spL=e.spoilage.reduce(function(s,x){ return s+(x.litres||0); },0); return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #21262d;"><div><div style="font-weight:600;font-size:13px;">'+e.vehNum+' <span class="bdg bdg-'+e.shift+'">'+(e.shift==='M'?'M':'E')+'</span>'+(e.spare?' <span class="bdg" style="background:rgba(249,115,22,.15);color:#f97316;">Spare</span>':'')+'</div><div style="font-size:11px;color:#8b949e;">'+e.vehRoute+' · '+e.cans+' cans · '+e.staff+'</div></div>'+(e.spoilage.length?'<span class="bdg bdg-sp">⚠️ '+spL.toFixed(1)+'L</span>':'<span class="bdg bdg-ok">✓</span>')+'</div>'; }).join('');
+}
+function sendWAMgr(){
+  var date=todayISO();
+  var all=loadEntries().filter(function(e){ return e.date===date; });
+  var closes=loadCloses().filter(function(c){ return c.date===date; });
+  var tLtr=closes.reduce(function(s,c){ return s+parseFloat(c.litres||0); },0);
+  var allSp=[]; all.forEach(function(e){ e.spoilage.forEach(function(s){ allSp.push({society:s.society,cans:s.cans,litres:s.litres,veh:e.vehNum,shift:e.shift}); }); });
+  var spLtr=allSp.reduce(function(s,x){ return s+(x.litres||0); },0);
+  var mCl=closes.find(function(c){ return c.shift==='M'; }),eCl=closes.find(function(c){ return c.shift==='E'; });
+  var m='🥛 *GKD Dairy – Daily Summary*\n📅 *'+fmtD(date)+'*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ *மொத்த Collection: '+tLtr.toFixed(1)+' L*\n🚛 Vehicles: '+all.length+' | Cans: '+all.reduce(function(s,e){ return s+e.cans; },0)+'\n';
+  if(mCl) m+='🌅 Morning: '+mCl.litres+' L ('+all.filter(function(e){ return e.shift==='M'; }).length+' vehs)\n';
+  if(eCl) m+='🌙 Evening: '+eCl.litres+' L ('+all.filter(function(e){ return e.shift==='E'; }).length+' vehs)\n';
+  if(allSp.length){ m+='\n⚠️ *Spoilage: '+allSp.length+' Society | '+spLtr.toFixed(1)+' L*\n'; allSp.forEach(function(s,i){ m+=(i+1)+'. '+s.society+' – '+s.cans+' cans · '+s.litres+'L ('+(s.shift==='M'?'Morning':'Evening')+')\n'; }); }
+  else { m+='\n✅ *Spoilage இல்லை*\n'; }
+  m+='\n_G.K. Dairy, Kumbakonam_';
+  window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank');
+}
+
+// =========== CSV ===========
+function doCSV(){
+  var date=document.getElementById('rptDate').value;
+  if(!date){ toast('தேதி தேர்வு செய்யவும்'); return; }
+  var all=loadEntries().filter(function(e){ return e.date===date; });
+  if(!all.length){ toast('Data இல்லை'); return; }
+  var rows=[['Date','Shift','Staff','Vehicle No','Route','Arrival','Unload Start','Unload End','Cans','Samples','Spare','Spare No','Sp Society','Sp Cans','Sp Litres','Sp Detail']];
+  all.forEach(function(e){ var spC=e.spoilage.reduce(function(s,x){ return s+x.cans; },0),spL=e.spoilage.reduce(function(s,x){ return s+(x.litres||0); },0); rows.push([e.date,e.shift==='M'?'Morning':'Evening',e.staff,e.vehNum,e.vehRoute,e.arrival,e.unloadS,e.unloadE,e.cans,e.sample,e.spare?'Yes':'No',e.spareNo,e.spoilage.length,spC,spL.toFixed(1),e.spoilage.map(function(s){ return s.society+':'+s.cans+'cans:'+s.litres+'L'; }).join('; ')]); });
+  var csv=rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='GKD_RMRD_'+date+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('CSV Downloaded!');
+}
+
+// =========== TOAST ===========
+function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); setTimeout(function(){ t.classList.remove('on'); },2500); }
+
+// =========== INIT ===========
+refreshSavedList();
+document.getElementById('rptDate').value=todayISO();
+// Show setup if no URL saved
+if(!WEB_APP_URL){
+  document.getElementById('setupModal').classList.remove('hide');
+  setSyncStatus('err','URL இல்லை — Setup பண்ணவும்');
+} else {
+  document.getElementById('setupModal').classList.add('hide');
+  testConnection();
+}
+</script>
+</body>
+</html>
