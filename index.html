@@ -159,6 +159,7 @@ pre#waText{white-space:pre-wrap;font-family:Arial,sans-serif;font-size:12px;line
   <div class="tab" onclick="goPg('close',this)">🔒 Close</div>
   <div class="tab" onclick="goPg('report',this)">📊 Report</div>
   <div class="tab" onclick="goPg('manager',this)">👔 Manager</div>
+  <div class="tab" onclick="goPg('vmaster',this)">🚛 Vehicles</div>
 </div>
 
 <!-- ENTRY -->
@@ -291,6 +292,79 @@ pre#waText{white-space:pre-wrap;font-family:Arial,sans-serif;font-size:12px;line
       <button class="btn btn-wa" onclick="sendWAMgr()">📲 Full Report WhatsApp</button>
     </div>
   </div>
+</div>
+
+
+<!-- VEHICLE MASTER -->
+<div id="pg-vmaster" class="pg">
+
+  <div class="card" style="padding:12px 14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:#f0b429;" id="vm-count">0</div>
+        <div style="font-size:11px;color:#8b949e;">மொத்த Vehicles</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        <button class="btn btn-y btn-sm" onclick="openAddVeh()">+ சேர்க்க</button>
+        <button class="btn btn-gr btn-sm" onclick="triggerCSVImport()">&#128229; CSV Import</button>
+        <button class="btn btn-gr btn-sm" onclick="exportVehCSV()">&#128228; Export</button>
+      </div>
+    </div>
+    <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCSVImport(event)">
+  </div>
+
+  <div class="card" style="padding:10px 14px;">
+    <input type="text" id="vm-search" placeholder="Vehicle no / Route தேடவும்..." oninput="renderVehList()" style="font-size:13px;">
+  </div>
+
+  <div id="vm-help" style="margin:0 14px 10px;background:#161b22;border:1px dashed #30363d;border-radius:8px;padding:10px 14px;font-size:11px;color:#8b949e;display:none;">
+    <b style="color:#f0b429;">CSV Format (3 columns):</b><br>
+    id, num, route<br>
+    <span style="color:#3fb950;">Example:</span><br>
+    V01,TN 45 A 1001,Kumbakonam - Papanasam<br>
+    <button class="btn btn-gr btn-sm" style="margin-top:8px;" onclick="downloadSampleCSV()">Sample CSV Download</button>
+  </div>
+
+  <div id="vm-list" style="padding:0 14px;"></div>
+
+  <div class="modal-bg hide" id="vehModal">
+    <div class="modal">
+      <h2 id="vehModalTitle">Vehicle சேர்க்க</h2>
+      <div class="frow">
+        <label>Vehicle ID (V01, V02...)</label>
+        <input type="text" id="vm-id" placeholder="V01">
+      </div>
+      <div class="frow">
+        <label>Vehicle Number</label>
+        <input type="text" id="vm-num" placeholder="TN 45 A 1001">
+      </div>
+      <div class="frow">
+        <label>Route</label>
+        <input type="text" id="vm-route" placeholder="Kumbakonam - Papanasam">
+      </div>
+      <input type="hidden" id="vm-editIdx" value="-1">
+      <button class="btn btn-y" onclick="saveVeh()">Save</button>
+      <button class="btn btn-gr" onclick="closeVehModal()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="modal-bg hide" id="importModal">
+    <div class="modal" style="max-width:480px;">
+      <h2>CSV Import Preview</h2>
+      <div id="importStats" style="font-size:12px;color:#8b949e;margin-bottom:12px;"></div>
+      <div id="importPreview" style="max-height:200px;overflow-y:auto;margin-bottom:12px;"></div>
+      <div style="margin-bottom:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="importReplace" style="width:auto;">
+          <span style="font-size:13px;color:#e6edf3;">Existing vehicles replace (Overwrite)</span>
+        </label>
+        <p style="font-size:11px;color:#8b949e;margin-top:4px;">Uncheck = புதிய மட்டும் சேர் (Merge)</p>
+      </div>
+      <button class="btn btn-g" onclick="confirmImport()">Import பண்ணு</button>
+      <button class="btn btn-gr" onclick="cancelImport()">Cancel</button>
+    </div>
+  </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
@@ -738,3 +812,194 @@ if(!WEB_APP_URL){
 </script>
 </body>
 </html>
+<script>
+// =========== VEHICLE MASTER ===========
+var _importBuf = [];
+
+function loadVEH(){
+  var saved = localStorage.getItem('rmrd_vehicles');
+  if(saved){
+    try{ return JSON.parse(saved); }catch(e){}
+  }
+  return VEH; // fallback to hardcoded
+}
+function storeVEH(arr){ localStorage.setItem('rmrd_vehicles', JSON.stringify(arr)); VEH = arr; }
+
+function renderVehList(){
+  var arr = loadVEH();
+  var q = (document.getElementById('vm-search')||{}).value||'';
+  q = q.toLowerCase().trim();
+  var filtered = q ? arr.filter(function(v){
+    return v.num.toLowerCase().indexOf(q)>=0 || v.route.toLowerCase().indexOf(q)>=0 || v.id.toLowerCase().indexOf(q)>=0;
+  }) : arr;
+  document.getElementById('vm-count').textContent = arr.length;
+  var el = document.getElementById('vm-list');
+  if(!filtered.length){
+    el.innerHTML = '<div class="empty">Vehicle இல்லை</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(function(v, idx){
+    var realIdx = arr.indexOf(v);
+    return '<div class="rentry" style="margin-bottom:8px;">'
+      + '<div class="rhdr" style="cursor:default;">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<span class="vtag">'+v.id+'</span>'
+      + '<div><div style="font-weight:700;font-size:13px;">'+v.num+'</div>'
+      + '<div style="font-size:11px;color:#8b949e;">'+v.route+'</div></div></div>'
+      + '<div style="display:flex;gap:6px;">'
+      + '<button class="btn btn-gr btn-sm" onclick="editVeh('+realIdx+')">✏️</button>'
+      + '<button class="btn btn-r btn-sm" onclick="delVeh('+realIdx+')">🗑️</button>'
+      + '</div></div></div>';
+  }).join('');
+}
+
+function openAddVeh(){
+  document.getElementById('vehModalTitle').textContent = 'Vehicle சேர்க்க';
+  document.getElementById('vm-id').value = '';
+  document.getElementById('vm-num').value = '';
+  document.getElementById('vm-route').value = '';
+  document.getElementById('vm-editIdx').value = -1;
+  document.getElementById('vehModal').classList.remove('hide');
+}
+
+function editVeh(idx){
+  var arr = loadVEH();
+  var v = arr[idx];
+  if(!v) return;
+  document.getElementById('vehModalTitle').textContent = 'Vehicle திருத்தம்';
+  document.getElementById('vm-id').value = v.id;
+  document.getElementById('vm-num').value = v.num;
+  document.getElementById('vm-route').value = v.route;
+  document.getElementById('vm-editIdx').value = idx;
+  document.getElementById('vehModal').classList.remove('hide');
+}
+
+function saveVeh(){
+  var id = document.getElementById('vm-id').value.trim().toUpperCase();
+  var num = document.getElementById('vm-num').value.trim().toUpperCase();
+  var route = document.getElementById('vm-route').value.trim();
+  if(!id||!num||!route){ toast('அனைத்தும் நிரப்பவும்'); return; }
+  var arr = loadVEH();
+  var idx = parseInt(document.getElementById('vm-editIdx').value);
+  if(idx >= 0){
+    arr[idx] = {id:id, num:num, route:route};
+    toast('Vehicle updated!');
+  } else {
+    var dup = arr.find(function(v){ return v.id===id; });
+    if(dup){ toast('ID ஏற்கனவே உள்ளது!'); return; }
+    arr.push({id:id, num:num, route:route});
+    toast('Vehicle சேர்க்கப்பட்டது!');
+  }
+  storeVEH(arr);
+  closeVehModal();
+  renderVehList();
+}
+
+function delVeh(idx){
+  var arr = loadVEH();
+  if(!confirm('Vehicle "'+arr[idx].num+'" நீக்கணுமா?')) return;
+  arr.splice(idx,1);
+  storeVEH(arr);
+  renderVehList();
+  toast('நீக்கப்பட்டது!');
+}
+
+function closeVehModal(){
+  document.getElementById('vehModal').classList.add('hide');
+}
+
+// ---- CSV IMPORT ----
+function triggerCSVImport(){
+  document.getElementById('vm-help').style.display = 'block';
+  document.getElementById('csvFileInput').value = '';
+  document.getElementById('csvFileInput').click();
+}
+
+function handleCSVImport(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    var text = ev.target.result;
+    var rows = text.trim().split('\n').map(function(r){ return r.split(',').map(function(c){ return c.replace(/^"|"$/g,'').trim(); }); });
+    // detect header
+    var start = 0;
+    if(rows[0][0].toLowerCase()==='id' || rows[0][0].toLowerCase()==='vehicle id') start=1;
+    var parsed = [];
+    rows.slice(start).forEach(function(r){
+      if(r.length>=3 && r[0] && r[1] && r[2]){
+        parsed.push({id:r[0].toUpperCase(), num:r[1].toUpperCase(), route:r[2]});
+      }
+    });
+    if(!parsed.length){ toast('CSV-ல் valid data இல்லை'); return; }
+    _importBuf = parsed;
+    showImportPreview(parsed);
+  };
+  reader.readAsText(file);
+}
+
+function showImportPreview(arr){
+  document.getElementById('importStats').textContent = arr.length+' vehicles found in CSV';
+  var html = '<table class="tbl"><tr><th>ID</th><th>Number</th><th>Route</th></tr>';
+  arr.slice(0,20).forEach(function(v){
+    html += '<tr><td>'+v.id+'</td><td>'+v.num+'</td><td>'+v.route+'</td></tr>';
+  });
+  if(arr.length>20) html += '<tr><td colspan="3" style="color:#8b949e;text-align:center;">... மேலும் '+(arr.length-20)+' rows</td></tr>';
+  html += '</table>';
+  document.getElementById('importPreview').innerHTML = html;
+  document.getElementById('importModal').classList.remove('hide');
+}
+
+function confirmImport(){
+  var replace = document.getElementById('importReplace').checked;
+  var existing = replace ? [] : loadVEH();
+  _importBuf.forEach(function(v){
+    var idx = existing.findIndex(function(e){ return e.id===v.id; });
+    if(idx>=0) existing[idx] = v;
+    else existing.push(v);
+  });
+  storeVEH(existing);
+  cancelImport();
+  renderVehList();
+  toast(_importBuf.length+' vehicles imported!');
+  _importBuf = [];
+  document.getElementById('vm-help').style.display = 'none';
+}
+
+function cancelImport(){
+  document.getElementById('importModal').classList.add('hide');
+  _importBuf = [];
+}
+
+// ---- CSV EXPORT ----
+function exportVehCSV(){
+  var arr = loadVEH();
+  if(!arr.length){ toast('Vehicle இல்லை'); return; }
+  var csv = 'id,num,route\n' + arr.map(function(v){ return '"'+v.id+'","'+v.num+'","'+v.route+'"'; }).join('\n');
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'GKD_Vehicle_Master.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('CSV Exported!');
+}
+
+// ---- SAMPLE CSV ----
+function downloadSampleCSV(){
+  var sample = 'id,num,route\nV01,TN 45 A 1001,Kumbakonam - Papanasam\nV02,TN 45 A 1002,Kumbakonam - Thanjavur\nV03,TN 45 B 2003,Kumbakonam - Thiruvidaimarudur\n';
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(sample);
+  a.download = 'Vehicle_Master_Sample.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ---- INIT VEH MASTER on page load ----
+// Sync VEH from localStorage on startup
+(function(){ var saved = localStorage.getItem('rmrd_vehicles'); if(saved){ try{ VEH = JSON.parse(saved); }catch(e){} } })();
+
+// Override goPg to refresh vmaster
+var _origGoPg = goPg;
+goPg = function(name, el){
+  _origGoPg(name, el);
+  if(name==='vmaster') renderVehList();
+};
+</script>
